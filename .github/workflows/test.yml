@@ -1,0 +1,28 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  catalog:
+    name: catalog and examples match Freefield's lab
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: src
+        run: echo "commit=$(python3 -c "import json; print(json.load(open('catalog/catalog.json'))['source']['commit'])")" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: neuregex/freefield
+          ref: ${{ steps.src.outputs.commit }}
+          path: freefield-main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      - run: python -m compileall -q __init__.py freefield_comfy tools tests
+      - run: FREEFIELD_SRC=freefield-main python -m pytest -q tests
