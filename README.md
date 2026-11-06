@@ -6,7 +6,7 @@ with the lab's example already filled in. Then press Run.
 
 <p>
 <img src="docs/panel.jpg" width="31%" alt="The Freefield tab: search, categories and app cards with what each one still needs">
-<img src="docs/app.jpg" width="31%" alt="An app's page: summary, the lab example's time and VRAM, its models and their licenses">
+<img src="docs/app.jpg" width="31%" alt="An app's page: summary, the lab example's time, the run on a 24 GB card, its models and their licenses">
 </p>
 
 There are no new nodes. Every Freefield app is a plain ComfyUI workflow, so what you open is ordinary ComfyUI that

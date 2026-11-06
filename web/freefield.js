@@ -51,7 +51,7 @@ const testedTitle = (t) => `${gpuName(t.machine.gpu)}, ${t.machine.ram_gb} GB of
 
 function vramLine(a) {
   const t = a.tested, est = a.vram?.fit ? esc(a.vram.fit) : "";
-  if (!t) return est ? `${est} (Freefield's estimate from weight sizes; not run on 24 GB here yet)` : "";
+  if (!t) return est ? `${est}: Freefield's estimate from weight sizes; not run on a 24 GB card yet` : "";
   const m = t.machine, time = runTime(t.runs[0] || {});   // the first run is the example as the tab opens it
   return `Ran on an ${esc(gpuName(m.gpu))} (${m.vram_gb} GB) with ${m.ram_gb} GB of RAM${time ? ` in ${time}` : ""}, `
     + `${esc(m.os)}, ${esc(t.date)}${est ? ` · Freefield's estimate from weight sizes: ${est}` : ""}`;
