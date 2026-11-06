@@ -5,7 +5,8 @@
 //       python main.py --cpu --port 8190 &                  # with this repo in custom_nodes/
 //   node tests/e2e/e2e.js http://127.0.0.1:8190/ shots/     # needs playwright; prints what it saw as JSON
 //
-// FREEFIELD_DEV=1 lists the model-free smoke app it runs; the Smooth download expects its model file to be missing.
+// FREEFIELD_DEV=1 lists the model-free smoke app it runs. The downloads expect these files to be missing: Smooth's model;
+// for Styles, its diffusion model (from every diffusion_models folder), the example's LoRA and the other styles' LoRAs.
 const { chromium } = require("playwright");
 const BASE = process.argv[2], SHOTS = process.argv[3];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -27,6 +28,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await btn.click();
   await p.waitForSelector(".ff-card", { timeout: 15000 });
   out.cards = await p.locator(".ff-card").count();
+  // the 24 GB label: apps that ran on an RTX 3090 Ti through the node say so; the others keep Freefield's estimate
+  out.vramBadges = await p.evaluate(() => Object.fromEntries(["dub", "cinema-video", "extend-video", "music"].map((id) =>
+    [id, [...document.querySelectorAll(`.ff-card[data-open="${id}"] .ff-badge`)].map((b) => b.textContent.trim())])));
   await p.screenshot({ path: `${SHOTS}/1-list.png` });
   // search, then an app's page
   await p.fill(".ff-search", "face swap");
@@ -73,6 +77,24 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   out.smoothAfter = await p.locator(".ff-detail .ff-models .ff-missing").count();
   out.smoothJob = await p.evaluate(async () => (await (await fetch("/api/freefield/downloads")).json())["smooth"]);
   await p.screenshot({ path: `${SHOTS}/4-downloaded.png` });
+  // Styles: Download gets what the workflow loads (its model and the example's LoRA), "Download these too" the other styles
+  const blocks = () => p.evaluate(() => [...document.querySelectorAll(".ff-detail .ff-block")].filter((b) => b.querySelector(".ff-models"))
+    .map((b) => ({ title: b.querySelector("h4").firstChild.textContent.trim(), rows: b.querySelectorAll("li").length,
+                   missing: b.querySelectorAll(".ff-missing").length, button: b.querySelector(".ff-btn")?.textContent.trim() || null })));
+  await p.locator("[data-back]").click();
+  await p.fill(".ff-search", "styles");
+  await sleep(300);
+  await p.locator('.ff-card[data-open="styles"]').click();
+  out.stylesBefore = await blocks();
+  out.stylesVram = await p.locator(".ff-vram").textContent();
+  await p.screenshot({ path: `${SHOTS}/5-styles.png` });
+  await p.locator('[data-act="download"]').click();
+  for (let i = 0; i < 40; i++) { await sleep(500); if ((await blocks())[0].missing === 0) break; }
+  out.stylesAfterDownload = await blocks();
+  await p.locator('[data-act="download-extra"]').click();
+  for (let i = 0; i < 60; i++) { await sleep(500); const b = await blocks(); if (b[1] && b[1].missing === 0) break; }
+  out.stylesAfterExtra = await blocks();
+  out.stylesJob = await p.evaluate(async () => (await (await fetch("/api/freefield/downloads")).json())["styles"]);
   out.errors = errs;
   console.log(JSON.stringify(out, null, 1));
   await b.close();

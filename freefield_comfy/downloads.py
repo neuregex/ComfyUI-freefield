@@ -112,15 +112,16 @@ def _run() -> None:
             job.update(state="error", error=str(e), finished=time.time())
 
 
-def start(app: dict, models: list[dict]) -> dict:
-    """Queue the app's missing files. Returns its progress record (also when already queued or running)."""
+def start(app: dict, models: list[dict], extra: bool = False) -> dict:
+    """Queue the app's missing files (extra: the LoRAs of its other choices). Returns its progress record, also when
+    a download for the app is already queued or running: one app downloads one set of files at a time."""
     global _worker
     with _lock:
         job = _jobs.get(app["id"])
         if job and job["state"] in ("queued", "downloading"):
             return job
         job = _jobs[app["id"]] = {
-            "app": app["id"], "state": "queued", "error": None, "current": None, "current_bytes": 0, "current_total_bytes": 0,
+            "app": app["id"], "extra": extra, "state": "queued", "error": None, "current": None, "current_bytes": 0, "current_total_bytes": 0,
             "files_total": len(models), "files_done": 0, "done_bytes": 0,
             "total_bytes": int(sum(m["gb"] for m in models) * 1e9), "started": time.time(), "finished": None,
         }

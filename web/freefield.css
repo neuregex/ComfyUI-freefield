@@ -36,6 +36,7 @@
 .ff-badge.ff-dl { border-color: var(--ff-accent); color: var(--ff-accent); }
 .ff-badge.ff-warn { border-color: #e0a84a; color: #e0a84a; }
 .ff-badge.ff-dim { border-style: dashed; }
+.ff-badge.ff-tested { color: var(--ff-fg); }
 .ff-foot { padding: 7px 12px; border-top: 1px solid var(--ff-line); color: var(--ff-dim); font-size: 11.5px; }
 .ff-empty { color: var(--ff-dim); }
 .ff-detail { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px 16px; display: flex; flex-direction: column; gap: 8px; }

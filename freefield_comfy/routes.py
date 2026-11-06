@@ -3,7 +3,8 @@
     GET  /freefield/catalog       every app, with what this ComfyUI still needs for it
     GET  /freefield/thumb/{id}    the app's example as a small picture
     POST /freefield/open          {"id", "example": true|false} → the app's workflow in API format, to load in the canvas
-    POST /freefield/download      {"id"} → queue the app's missing model files
+    POST /freefield/download      {"id", "extra": false|true} → queue the app's missing model files: the ones its workflow
+                                  loads, or (extra) the LoRAs of its other choices
     GET  /freefield/downloads     progress of every queued download
 """
 from __future__ import annotations
@@ -25,11 +26,14 @@ EXAMPLE_EXT = {"image": ".png", "video": ".mp4", "audio": ".wav"}
 
 
 def _public(a: dict) -> dict:
-    out = {k: a[k] for k in ("id", "name", "section", "category", "summary", "higgsfield_feature", "vram", "models",
+    out = {k: a[k] for k in ("id", "name", "section", "category", "summary", "higgsfield_feature", "vram",
                              "custom_nodes", "modes", "mode_label") if k in a}
+    need = catalog.loaded_files(a["id"])
+    out["models"] = [{**m, "extra": m["name"] not in need} for m in a["models"]]
     out["thumb"] = bool(a.get("thumb"))
     ex = a.get("example")
     out["example"] = {k: ex[k] for k in ("seconds", "gpu", "peak_vram_gb") if k in ex} if ex else None
+    out["tested"] = catalog.tested(a["id"])
     out["status"] = catalog.status(a)
     return out
 
@@ -103,11 +107,12 @@ async def post_download(request):
     a = catalog.app(str(body.get("id", "")))
     if not a:
         return web.json_response({"error": "unknown app"}, status=404)
+    extra = bool(body.get("extra"))
     loop = asyncio.get_running_loop()
-    missing = await loop.run_in_executor(None, lambda: [m for m in a["models"] if not catalog.model_present(m)])
+    missing = await loop.run_in_executor(None, catalog.missing_files, a, extra)
     if not missing:
-        return web.json_response({"state": "done", "app": a["id"], "files_total": 0})
-    return web.json_response(downloads.start(a, missing))
+        return web.json_response({"state": "done", "app": a["id"], "files_total": 0, "extra": extra})
+    return web.json_response(downloads.start(a, missing, extra))
 
 
 @routes.get("/freefield/downloads")

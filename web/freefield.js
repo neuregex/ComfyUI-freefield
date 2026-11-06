@@ -1,5 +1,6 @@
 // Freefield's apps in a ComfyUI sidebar tab: browse them by category, see what this ComfyUI still needs for one
 // (model files, node types), download its models, and open its workflow in a new tab, with the lab's example filled in.
+// "Download" gets the files the workflow loads; LoRAs for an app's other choices have a button of their own.
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
@@ -38,8 +39,22 @@ function badges(a) {
   else if (s.ready) out.push(`<span class="ff-badge ff-ok">Ready</span>`);
   else if (s.node_types_missing.length) out.push(`<span class="ff-badge ff-warn">Needs nodes</span>`);
   else out.push(`<span class="ff-badge">${gb(s.missing_gb)} to get</span>`);
-  if (a.vram?.fit) out.push(`<span class="ff-badge ff-dim">${esc(a.vram.fit)}</span>`);
+  if (a.tested) out.push(`<span class="ff-badge ff-tested" title="${esc(testedTitle(a.tested))}">Ran on ${a.tested.machine.vram_gb} GB</span>`);
+  else if (a.vram?.fit) out.push(`<span class="ff-badge ff-dim" title="Freefield's estimate from weight sizes">${esc(a.vram.fit)}</span>`);
   return out.join("");
+}
+
+// apps that ran on a 24 GB card through this node (tested/*.json); the others keep Freefield's estimate from weight sizes
+const gpuName = (g) => String(g || "").replace(/^NVIDIA (GeForce )?/, "");
+const runTime = (r) => (r.seconds != null ? `${Math.round(r.seconds)} s` : r.range ? `${r.range[0]}–${r.range[1]} s` : "");
+const testedTitle = (t) => `${gpuName(t.machine.gpu)}, ${t.machine.ram_gb} GB of RAM, ${t.machine.os}, ${t.date}`;
+
+function vramLine(a) {
+  const t = a.tested, est = a.vram?.fit ? esc(a.vram.fit) : "";
+  if (!t) return est ? `${est} (Freefield's estimate from weight sizes; not run on 24 GB here yet)` : "";
+  const m = t.machine, time = runTime(t.runs[0] || {});   // the first run is the example as the tab opens it
+  return `Ran on an ${esc(gpuName(m.gpu))} (${m.vram_gb} GB) with ${m.ram_gb} GB of RAM${time ? ` in ${time}` : ""}, `
+    + `${esc(m.os)}, ${esc(t.date)}${est ? ` · Freefield's estimate from weight sizes: ${est}` : ""}`;
 }
 
 const pct = (j) => (j.total_bytes ? Math.min(100, Math.floor((100 * j.done_bytes) / j.total_bytes)) : 0);
@@ -82,28 +97,45 @@ function listView() {
     <div class="ff-foot">Apps from <a href="${REPO}" target="_blank" rel="noopener">neuregex/freefield</a> @ ${esc(d.source.ref.slice(0, 7))} · open weights only</div>`;
 }
 
-function modelRows(a) {
-  const missing = new Set(a.status.models_missing);
-  return a.models.map((m) => `<li class="${missing.has(m.name) ? "ff-missing" : "ff-have"}">
+function modelRows(models, missing) {
+  return models.map((m) => `<li class="${missing.has(m.name) ? "ff-missing" : "ff-have"}">
       <span class="ff-mark">${missing.has(m.name) ? "○" : "●"}</span>
       <span class="ff-file" title="${esc(m.repo)}/${esc(m.file)}">${esc(m.name)}</span>
       <span class="ff-size">${gb(m.gb)}</span>
-      <small>${esc(m.dir)} · ${esc(m.license)}${m.gated ? " · gated" : ""}${m.optional ? " · optional" : ""}</small>
+      <small>${esc(m.dir)} · ${esc(m.license)}${m.gated ? " · gated" : ""}</small>
     </li>`).join("");
 }
 
-function downloadBlock(a) {
+// extra=false: the files the workflow loads; extra=true: the LoRAs of the app's other choices
+function downloadBlock(a, extra) {
   const s = a.status, j = jobOf(a.id);
   if (busy(j)) {
+    if (!!j.extra !== extra) return "";   // the other set is downloading: one set per app at a time
     return `<div class="ff-progress"><div style="width:${pct(j)}%"></div></div>
       <p class="ff-note">${esc(j.state === "queued" ? "Queued" : `Downloading ${j.current || ""}`)} · ${pct(j)}% of ${gb(j.total_bytes / 1e9)}
       · file ${Math.min(j.files_done + 1, j.files_total)} of ${j.files_total}</p>`;
   }
-  const err = j?.state === "error" ? `<p class="ff-error">${esc(j.error)}</p>` : "";
-  if (!s.models_missing.length) return err;
-  const gated = a.models.some((m) => m.gated && s.models_missing.includes(m.name));
-  return `${err}<button class="ff-btn" data-act="download">Download ${gb(s.missing_gb)}</button>
+  const err = j?.state === "error" && !!j.extra === extra ? `<p class="ff-error">${esc(j.error)}</p>` : "";
+  const missing = extra ? s.extra_missing : s.needed_missing;
+  if (!missing.length) return err;
+  const gated = a.models.some((m) => m.gated && missing.includes(m.name));
+  const label = extra ? `Download these too · ${gb(s.extra_missing_gb)}` : `Download ${gb(s.missing_gb)}`;
+  return `${err}<button class="ff-btn" data-act="${extra ? "download-extra" : "download"}">${label}</button>
     ${gated ? `<p class="ff-note">Gated files: accept the license on Hugging Face, then <code>hf auth login</code> or set <code>HF_TOKEN</code> before starting ComfyUI.</p>` : ""}`;
+}
+
+function modelsBlocks(a) {
+  const s = a.status, missing = new Set(s.models_missing);
+  const need = a.models.filter((m) => !m.extra), extra = a.models.filter((m) => m.extra);
+  const head = need.length ? (s.needed_missing.length ? `<span>${s.needed_missing.length} of ${need.length} missing</span>` : "<span>all here</span>") : "<span>none</span>";
+  let out = `<div class="ff-block"><h4>Models ${head}</h4>
+      <ul class="ff-models">${modelRows(need, missing)}</ul>${downloadBlock(a, false)}</div>`;
+  if (extra.length) {
+    out += `<div class="ff-block"><h4>Other choices <span>${s.extra_missing.length ? `${s.extra_missing.length} of ${extra.length} missing` : "all here"}</span></h4>
+      <p class="ff-note">LoRAs the workflow does not load as it opens: another effect or style, or one to add yourself. Download them to pick them in its LoRA loader.</p>
+      <ul class="ff-models">${modelRows(extra, missing)}</ul>${downloadBlock(a, true)}</div>`;
+  }
+  return out;
 }
 
 function detailView(a) {
@@ -121,7 +153,8 @@ function detailView(a) {
     ${a.thumb ? `<img class="ff-hero" src="${thumb(a)}" alt="">` : ""}
     <h3>${esc(a.name)}</h3>
     <p>${esc(a.summary)}</p>
-    <p class="ff-note">${a.higgsfield_feature ? `Rebuilds Higgsfield's ${esc(a.higgsfield_feature)}. ` : ""}${exLine}${a.vram?.fit ? ` · ${esc(a.vram.fit)}` : ""}</p>
+    <p class="ff-note">${a.higgsfield_feature ? `Rebuilds Higgsfield's ${esc(a.higgsfield_feature)}. ` : ""}${exLine}</p>
+    ${vramLine(a) ? `<p class="ff-note ff-vram">${vramLine(a)}</p>` : ""}
     ${sibling.length ? `<p class="ff-note">${esc(a.mode_label || "Mode")}: ${sibling.map((x) => `<a href="#" data-open="${esc(x.id)}">${esc(x.name)}</a>`).join(", ")}</p>` : ""}
     <div class="ff-actions">
       ${ex ? `<button class="ff-btn ff-primary" data-act="example">Open with example</button>` : ""}
@@ -129,8 +162,7 @@ function detailView(a) {
     </div>
     ${ex?.needs?.length ? `<p class="ff-note">The example leaves out: ${ex.needs.map((n) => esc(n.label)).join(", ")}. Add your own in its loader node.</p>` : ""}
     ${nodesWarn}
-    <div class="ff-block"><h4>Models ${s.models_missing.length ? `<span>${s.models_missing.length} of ${a.models.length} missing</span>` : a.models.length ? "<span>all here</span>" : "<span>none</span>"}</h4>
-      <ul class="ff-models">${modelRows(a)}</ul>${downloadBlock(a)}</div>
+    ${modelsBlocks(a)}
     <p class="ff-note"><a href="${REPO}/tree/main/apps/${esc(a.id)}" target="_blank" rel="noopener">How it works</a> · every model's license is in its app.json</p>
   </div>`;
 }
@@ -159,9 +191,9 @@ async function openApp(id, example) {
   }
 }
 
-async function download(id) {
+async function download(id, extra) {
   try {
-    const j = await getJSON("/freefield/download", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    const j = await getJSON("/freefield/download", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, extra }) });
     state.data.downloads = { ...state.data.downloads, [id]: j };
     render();
     startPolling();
@@ -207,7 +239,7 @@ function mount(el) {
     else if (t.dataset.cat) { state.cat = t.dataset.cat; render(); }
     else if ("back" in t.dataset) { state.openId = null; render(); }
     else if (t.dataset.act === "example" || t.dataset.act === "empty") openApp(state.openId, t.dataset.act === "example");
-    else if (t.dataset.act === "download") download(state.openId);
+    else if (t.dataset.act === "download" || t.dataset.act === "download-extra") download(state.openId, t.dataset.act === "download-extra");
   });
   el.addEventListener("input", (ev) => {
     if (ev.target.classList.contains("ff-search")) {
