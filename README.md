@@ -21,8 +21,8 @@ cd ComfyUI/custom_nodes
 git clone https://github.com/neuregex/ComfyUI-freefield
 ```
 
-(On ComfyUI Desktop the folder is `custom_nodes` inside the ComfyUI folder you chose at install.) A listing in the
-Comfy Registry, so ComfyUI Manager can install it by name, is on its way.
+(On ComfyUI Desktop the folder is `custom_nodes` inside the ComfyUI folder you chose at install.) It is also in the
+Comfy Registry: search **Freefield** in ComfyUI Manager, or run `comfy node install freefield`.
 
 Restart ComfyUI and open the **Freefield** tab in the left sidebar (the grid icon).
 

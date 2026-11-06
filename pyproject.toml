@@ -1,5 +1,5 @@
 [project]
-name = "comfyui-freefield"
+name = "freefield"
 description = "Freefield's 117 image, video, VFX and audio apps inside ComfyUI: browse them in a sidebar tab, download their open-weight models and open each one as a workflow with its example."
 version = "0.1.0"
 license = { file = "LICENSE" }
@@ -12,3 +12,4 @@ Repository = "https://github.com/neuregex/ComfyUI-freefield"
 PublisherId = "neuregex"
 DisplayName = "Freefield"
 Icon = "https://raw.githubusercontent.com/neuregex/ComfyUI-freefield/main/docs/icon.png"
+requires-comfyui = ">=0.42.0"
