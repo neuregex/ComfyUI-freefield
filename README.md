@@ -69,8 +69,8 @@ four MiniMax H3 apps (H3 Photo to Video, H3 Video, Extend Video, Re-shoot), whos
   files Freefield marks optional, such as the small Gemma model of the video apps' prompt enhancer: ComfyUI checks every
   loader before it runs anything, even one on a branch that is switched off. A new file goes to the first folder
   ComfyUI uses for its kind (an `extra_model_paths.yaml` folder with `is_default: true` comes first).
-- Opening an example downloads its input files once from the main repo at the snapshot's commit into ComfyUI's input
-  folder, as `freefield_<app>_<input>.<ext>`, and fills the workflow exactly as Freefield's lab does.
+- Opening an example downloads its input files once from the main repo, at the `ref` that `catalog.json` names, into
+  ComfyUI's input folder, as `freefield_<app>_<input>.<ext>`, and fills the workflow exactly as Freefield's lab does.
 - The node reaches the network only when you press a button: huggingface.co for models, raw.githubusercontent.com
   for example files.
 

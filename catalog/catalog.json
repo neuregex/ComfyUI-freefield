@@ -2,8 +2,8 @@
  "source": {
   "repo": "neuregex/freefield",
   "ref": "e5fa71b8ae52db7f20aa76b5e6e56fc3adff2fca",
-  "commit": "e5fa71b8ae52db7f20aa76b5e6e56fc3adff2fca",
-  "synced": "2026-11-02"
+  "commit": "f3d32ce2e3128c58bb2fe38c8942edf87cdb2e4c",
+  "synced": "2026-11-06"
  },
  "categories": [
   {
@@ -6724,7 +6724,7 @@
      "gb": 4.91,
      "gated": false,
      "optional": false,
-     "license": "Apache-2.0",
+     "license": "MiniMax-Music3 Community License",
      "phase": "denoise"
     },
     {
@@ -6735,7 +6735,7 @@
      "gb": 9.2,
      "gated": false,
      "optional": false,
-     "license": "Apache-2.0",
+     "license": "MiniMax-Music3 Community License",
      "phase": "encode"
     },
     {
@@ -6746,7 +6746,7 @@
      "gb": 0.22,
      "gated": false,
      "optional": false,
-     "license": "Apache-2.0",
+     "license": "MiniMax-Music3 Community License",
      "phase": "decode"
     }
    ],
