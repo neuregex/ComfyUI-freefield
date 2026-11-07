@@ -1,7 +1,7 @@
 [project]
 name = "freefield"
 description = "Freefield's 117 image, video, VFX and audio apps inside ComfyUI: browse them in a sidebar tab, download their open-weight models and open each one as a workflow with its example."
-version = "0.1.0"
+version = "0.1.1"
 license = { file = "LICENSE" }
 dependencies = []
 

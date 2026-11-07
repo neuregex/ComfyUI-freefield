@@ -1,0 +1,5 @@
+# Left out of the Comfy Registry package (comfy node pack / publish): development files only.
+# ComfyUI loads __init__.py, freefield_comfy/, web/ and catalog/; GitHub keeps everything.
+.github/
+tests/
+tools/
